@@ -138,6 +138,12 @@ void initState() {
                                     fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 10),
+                               Image.network(
+      'https://openweathermap.org/img/wn/${Weather.icon}@2x.png',
+    ),
+
+    const SizedBox(height: 10),
+                              
                               Text(
                                 '${Weather.temperature.toStringAsFixed(1)}°C',
                                 style: const TextStyle(fontSize: 60),
