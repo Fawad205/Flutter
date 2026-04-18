@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'weather_model.dart';
 import 'weather_service.dart';
+import 'package:geolocator/geolocator.dart';
 
 void main() {
   runApp(const WeatherApp());
@@ -28,35 +29,60 @@ class WeatherAppScreen extends StatefulWidget {
 }
 
 class _WeatherAppScreenState extends State<WeatherAppScreen> {
-  TextEditingController latController = TextEditingController();
-  TextEditingController lonController = TextEditingController();
+  Future<Position> _determinePosition() async {
+  bool serviceEnabled;
+  LocationPermission permission;
+
+  // Check if location services are enabled
+  serviceEnabled = await Geolocator.isLocationServiceEnabled();
+  if (!serviceEnabled) {
+    throw Exception('Location services are disabled.');
+  }
+
+  // Check permission
+  permission = await Geolocator.checkPermission();
+  if (permission == LocationPermission.denied) {
+    permission = await Geolocator.requestPermission();
+    if (permission == LocationPermission.denied) {
+      throw Exception('Location permissions are denied');
+    }
+  }
+
+  if (permission == LocationPermission.deniedForever) {
+    throw Exception('Location permissions are permanently denied');
+  }
+
+  return await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high);
+}
 
   final WeatherService _weatherServices = WeatherService();
   Future<Weather>? _weatherFuture;
 
-  void getWeather() {
-    double? lat = double.tryParse(latController.text);
-    double? lon = double.tryParse(lonController.text);
-
-    if (lat == null || lon == null) {
-      return;
-    }
+  void getWeather() async {
+  try {
+    final position = await _determinePosition();
 
     setState(() {
-      _weatherFuture = _weatherServices.fetchWeather(lat, lon);
+      _weatherFuture = _weatherServices.fetchWeather(
+        position.latitude,
+        position.longitude,
+      );
     });
+  } catch (e) {
+    print(e);
   }
+}
 
   void _refreshWeather() {
     getWeather();
   }
 
-  @override
-  void dispose() {
-    latController.dispose();
-    lonController.dispose();
-    super.dispose();
-  }
+ @override
+void initState() {
+  super.initState();
+  getWeather();
+}
 
   @override
   Widget build(BuildContext context) {
@@ -76,21 +102,10 @@ class _WeatherAppScreenState extends State<WeatherAppScreen> {
             padding: const EdgeInsets.all(12),
             child: Column(
               children: [
-                TextField(
-                  controller: latController,
-                  decoration: const InputDecoration(
-                    labelText: 'Latitude',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: lonController,
-                  decoration: const InputDecoration(
-                    labelText: 'Longitude',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
+                ElevatedButton(
+  onPressed: getWeather,
+  child: const Text('Get Current Location Weather'),
+),
                 const SizedBox(height: 10),
                 ElevatedButton(
                   onPressed: getWeather,
